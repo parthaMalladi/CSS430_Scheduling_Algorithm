@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
 #include "task.h"
@@ -9,6 +10,32 @@
 // Head of the task list
 struct node *taskList = NULL;
 int tid_counter = 1;
+
+// Function to compare two task names lexicographically
+static bool comesBefore(char *a, char *b) {
+    return strcmp(a, b) < 0;
+}
+
+// Finds the next task to run in lexicographical order
+static Task *pickNextTask() {
+    // If list is empty, return NULL
+    if (!taskList)
+        return NULL;
+
+    struct node *temp = taskList;
+    Task *best_sofar = temp->task;
+
+    // Traverse the list to find the lexicographically smallest task
+    while (temp != NULL) {
+        if (comesBefore(temp->task->name, best_sofar->name))
+            best_sofar = temp->task;
+        temp = temp->next;
+    }
+
+    // Remove the selected task from the list and return it
+    delete(&taskList, best_sofar);
+    return best_sofar;
+}
 
 // Adds a new task to the FCFS scheduler
 void add(char *name, int priority, int burst) {
@@ -22,15 +49,14 @@ void add(char *name, int priority, int burst) {
     insert(&taskList, newTask);
 }
 
-// Executes tasks in the order they were added (FCFS)
+// Executes tasks in lexicographical order
 void schedule() {
-    struct node *temp = taskList;
     int currentTime = 0;  // Initialize the current time
 
-    // Loop through the list and run each task
-    while (temp != NULL) {
-        Task *currentTask = temp->task;
-        
+    Task *currentTask;
+
+    // Use pickNextTask() to get tasks in lexicographical order
+    while ((currentTask = pickNextTask()) != NULL) {
         // Run the task for its full burst duration
         run(currentTask, currentTask->burst);
         
@@ -38,9 +64,8 @@ void schedule() {
         currentTime += currentTask->burst;
         printf("\tTime is now: %d\n", currentTime);
 
-        // Move to the next task and delete the current one from the list
-        struct node *next = temp->next;
-        delete(&taskList, currentTask);  // Remove the current task from the list
-        temp = next;
+        // Free the memory for the completed task
+        free(currentTask->name);
+        free(currentTask);
     }
 }
