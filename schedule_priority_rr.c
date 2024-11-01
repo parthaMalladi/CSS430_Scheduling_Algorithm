@@ -91,7 +91,11 @@ void schedule() {
         int timeSlice = currentTask->burst; // Default to full burst
         if (hasMultipleTasksWithSamePriority(currentTask->priority)) {
             // If there are multiple tasks with the same priority, set time slice to 10
-            timeSlice = (currentTask->burst >= 10) ? 10 : currentTask->burst;
+            if (currentTask->burst >= 10) {
+                timeSlice = 10;
+            } else {
+                currentTask->burst;
+            }
         }
 
         // Run the task for the time slice
