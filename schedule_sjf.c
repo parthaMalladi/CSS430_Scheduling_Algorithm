@@ -7,72 +7,60 @@
 #include "schedulers.h"
 #include "cpu.h"
 
-// Head of the task list
 struct node *taskList = NULL;
-int tid_counter = 1;
 
-// Function to compare two tasks by burst time, and lexicographically if burst times are equal
+// looks for the shortest task first and then the correct lexicographical order
 static bool comesBefore(Task *a, Task *b) {
-    // First, compare burst times
     if (a->burst < b->burst) {
         return true;
     } else if (a->burst == b->burst) {
-        // If burst times are equal, compare names lexicographically
         return strcmp(a->name, b->name) < 0;
     }
     return false;
 }
 
-// Finds the next task to run in lexicographical order
 static Task *pickNextTask() {
-    // If list is empty, return NULL
     if (!taskList)
         return NULL;
 
     struct node *temp = taskList;
-    Task *best_sofar = temp->task;
+    Task *res = temp->task;
 
-    // Traverse the list to find the lexicographically smallest task
+    // find the shortest task in correct lexicographical order
     while (temp != NULL) {
-        if (comesBefore(temp->task, best_sofar))
-            best_sofar = temp->task;
+        if (comesBefore(temp->task, res))
+            res = temp->task;
         temp = temp->next;
     }
 
-    // Remove the selected task from the list and return it
-    delete(&taskList, best_sofar);
-    return best_sofar;
+    // deletes the task from the list once found
+    delete(&taskList, res);
+    return res;
 }
 
-// Adds a new task to the FCFS scheduler
 void add(char *name, int priority, int burst) {
+    // create a new task
     Task *newTask = malloc(sizeof(Task));
-    newTask->name = strdup(name);   // Duplicate the task name
+    newTask->name = strdup(name);
     newTask->priority = priority;
     newTask->burst = burst;
-    newTask->tid = tid_counter++;
+    newTask->tid = 0;
 
-    // Insert the new task at the end of the list
+    // insert the newly created task into the list
     insert(&taskList, newTask);
 }
 
-// Executes tasks in lexicographical order
 void schedule() {
-    int currentTime = 0;  // Initialize the current time
+    int currentTime = 0;
+    Task *curr;
 
-    Task *currentTask;
-
-    // Use pickNextTask() to get tasks in lexicographical order
-    while ((currentTask = pickNextTask()) != NULL) {
-        // Run the task for its full burst duration
-        run(currentTask, currentTask->burst);
+    // while there are tasks to pick, pick based on the scheduling algorithm
+    while ((curr = pickNextTask()) != NULL) {
+        // run the task for the entire burst
+        run(curr, curr->burst);
         
-        // Update and print the current time after running the task
-        currentTime += currentTask->burst;
+        // increment the time based on the burst
+        currentTime += curr->burst;
         printf("\tTime is now: %d\n", currentTime);
-
-        // Free the memory for the completed task
-        free(currentTask->name);
-        free(currentTask);
     }
 }

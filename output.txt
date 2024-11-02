@@ -1,3 +1,4 @@
+
 # compile and output fcfs
 Running task = [T1] [4] [20] for 20 units.
 	Time is now: 20

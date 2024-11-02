@@ -7,83 +7,82 @@
 #include "schedulers.h"
 #include "cpu.h"
 
-// Head of the task list
 struct node *taskList = NULL;
-int tid_counter = 1;
 
-// Adds a new task to the Round Robin scheduler
-void add(char *name, int priority, int burst) {
-    Task *newTask = malloc(sizeof(Task));
-    newTask->name = strdup(name);   // Duplicate the task name
-    newTask->tid = 0;               // Initialize run count to 0 (using tid for run count)
-    newTask->priority = priority;
-    newTask->burst = burst;
-
-    // Insert the new task at the end of the list
-    insert(&taskList, newTask);
-}
-
-// Function to compare two tasks by run count (using tid) and name
+// use tid to keep track of the number of iterations a task has gone through
+// allows me to always pick a task that hasnt ran in the round robin
+// in the case all tasks have the same number of iterations, pick tasks lexicographically
 static bool comesBefore(Task *a, Task *b) {
     if (a->tid < b->tid) {
         return true;
     } else if (a->tid == b->tid) {
-        return strcmp(a->name, b->name) < 0;  // Compare lexicographically
+        return strcmp(a->name, b->name) < 0;
     }
     return false;
 }
 
-// Finds the next task to run based on run count (tid) and name
 static Task *pickNextTask() {
     if (!taskList) {
-        return NULL;  // Return NULL if the list is empty
+        return NULL;
     }
 
     struct node *temp = taskList;
-    Task *nextTask = temp->task;
+    Task *res = temp->task;
 
-    // Traverse the list to find the appropriate task to run
+    // find the next task in the round robin
     while (temp != NULL) {
-        if (comesBefore(temp->task, nextTask)) {
-            nextTask = temp->task;
+        if (comesBefore(temp->task, res)) {
+            res = temp->task;
         }
         temp = temp->next;
     }
 
-    return nextTask;
+    // don't delete the task once picked because it might not be complete
+    return res;
 }
 
-// Round Robin scheduler function with time slice of 10
+void add(char *name, int priority, int burst) {
+    // create a new task
+    Task *newTask = malloc(sizeof(Task));
+    newTask->name = strdup(name);
+    newTask->priority = priority;
+    newTask->burst = burst;
+    newTask->tid = 0;
+
+    // insert the newly created task into the list
+    insert(&taskList, newTask);
+}
+
 void schedule() {
     int currentTime = 0;
 
+    // while there are tasks to pick
     while (taskList != NULL) {
-        Task *currentTask = pickNextTask();
+        Task *curr = pickNextTask();
+        int timeSlice = 0;
 
-        // Determine the time slice (either 10 or remaining burst time)
-        int timeSlice;
-        if (currentTask->burst >= 10) {
+        // if the burst left is greater than 10, only use the 10 millisecond time quantum
+        // otherwise make the time quantum the leftover burst
+        if (curr->burst >= 10) {
             timeSlice = 10;
         } else {
-            timeSlice = currentTask->burst;
+            timeSlice = curr->burst;
         }
 
-        // Run the task for the time slice
-        run(currentTask, timeSlice);
+        // run task for 10 milliseconds or lower
+        run(curr, timeSlice);
         currentTime += timeSlice;
-
-        // Display the current time
         printf("\tTime is now: %d\n", currentTime);
 
-        // Reduce the task's burst time by the time slice
-        currentTask->burst -= timeSlice;
+        // reduce the burst down by the time it was run by the cpu
+        curr->burst -= timeSlice;
 
-        // Increment the tid to keep track of the number of times the task has been run
-        currentTask->tid++;  
+        // increase the tid to track that the task has run for the current round
+        curr->tid++;  
 
-        // If task is completed, delete it from the list
-        if (currentTask->burst <= 0) {
-            delete(&taskList, currentTask);
+        // if a task has been completed, delete from the list
+        if (curr->burst <= 0) {
+            delete(&taskList, curr);
         }
     }
 }
