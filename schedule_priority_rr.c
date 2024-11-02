@@ -79,35 +79,35 @@ void schedule() {
 
     // while there are tasks to pick
     while (taskList != NULL) {
-        Task *currentTask = pickNextTask();
+        Task *curr = pickNextTask();
 
-        if (currentTask == NULL) {
+        if (curr == NULL) {
             break;
         }
 
-        // if there are multiple tasks with the same priority, make the burst 10 for the rr time quantum
+        // if there are multiple tasks with the same priority, make the burst 10 (or rest of the burst) for the rr time quantum
         // otherwise keep the quantum the entire burst of the task
-        int timeSlice = currentTask->burst;
-        if (multipleSamePriority(currentTask->priority)) {
-            if (currentTask->burst >= 10) {
+        int timeSlice = curr->burst;
+        if (multipleSamePriority(curr->priority)) {
+            if (curr->burst >= 10) {
                 timeSlice = 10;
             }
         }
 
         // run the task for the correct time quantum
-        run(currentTask, timeSlice);
+        run(curr, timeSlice);
         currentTime += timeSlice;
         printf("\tTime is now: %d\n", currentTime);
 
         // reduce the burst based on how much the task has run
-        currentTask->burst -= timeSlice;
+        curr->burst -= timeSlice;
 
         // keep track of iterations using the tid
-        currentTask->tid++;  
+        curr->tid++;  
 
         // if a task has been completed, delete from the list
-        if (currentTask->burst <= 0) {
-            delete(&taskList, currentTask);
+        if (curr->burst <= 0) {
+            delete(&taskList, curr);
         }
     }
 }
